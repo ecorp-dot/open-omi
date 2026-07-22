@@ -11,6 +11,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_provider_utilities/flutter_provider_utilities.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:omi/backend/http/api/conversations.dart';
 import 'package:omi/backend/preferences.dart';
@@ -460,6 +461,42 @@ class CaptureController extends ChangeNotifier
     _sessionStartSeconds = 0;
     _endOfflineSession();
     notifyListeners();
+  }
+
+  Future<void> _persistLocalConversationIfNeeded() async {
+    if (!SharedPreferencesUtil().localModeEnabled || segments.isEmpty) return;
+
+    final now = DateTime.now();
+    final startedAt = _sessionStartSeconds > 0
+        ? DateTime.fromMillisecondsSinceEpoch(_sessionStartSeconds * 1000)
+        : now.subtract(Duration(seconds: segments.last.end.ceil()));
+    final transcriptText = segments.map((segment) => segment.text.trim()).where((text) => text.isNotEmpty).join(' ');
+    final title = _localConversationTitle(transcriptText, now);
+    final conversation = ServerConversation(
+      id: 'local-${const Uuid().v4()}',
+      createdAt: now,
+      startedAt: startedAt,
+      finishedAt: now,
+      structured: Structured(title, transcriptText.isEmpty ? title : transcriptText),
+      transcriptSegments: List<TranscriptSegment>.from(segments),
+      photos: List<ConversationPhoto>.from(photos),
+      source: _activeSource is PhoneMicSource ? ConversationSource.phone : ConversationSource.omi,
+      language:
+          SharedPreferencesUtil().userPrimaryLanguage.isEmpty ? null : SharedPreferencesUtil().userPrimaryLanguage,
+      status: ConversationStatus.completed,
+    )..isNew = true;
+
+    final cached = SharedPreferencesUtil().cachedConversations;
+    SharedPreferencesUtil().cachedConversations = [conversation, ...cached];
+    externalActions.upsertConversation(conversation);
+  }
+
+  String _localConversationTitle(String transcriptText, DateTime timestamp) {
+    final trimmed = transcriptText.trim();
+    if (trimmed.isEmpty) {
+      return 'Local transcript ${timestamp.month}/${timestamp.day} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    }
+    return trimmed.length <= 48 ? trimmed : '${trimmed.substring(0, 48).trimRight()}...';
   }
 
   void _endOfflineSession() {
@@ -1419,6 +1456,7 @@ class CaptureController extends ChangeNotifier
       }
       _phoneMicWalActive = false;
     }
+    await _persistLocalConversationIfNeeded();
     await _cleanupCurrentState(disableNativeBackground: true);
     _micInterrupted = false;
     ServiceManager.instance().phoneMic.stop();
@@ -1526,6 +1564,7 @@ class CaptureController extends ChangeNotifier
   }
 
   Future stopStreamDeviceRecording({bool cleanDevice = false}) async {
+    await _persistLocalConversationIfNeeded();
     await _cleanupCurrentState(disableNativeBackground: true);
     if (cleanDevice) {
       _updateRecordingDevice(null);
@@ -1728,6 +1767,15 @@ class CaptureController extends ChangeNotifier
   }
 
   Future _loadInProgressConversation() async {
+    if (SharedPreferencesUtil().localModeEnabled) {
+      _conversation = null;
+      segments = [];
+      photos = [];
+      _segmentsPhotosVersion++;
+      setHasTranscripts(false);
+      notifyListeners();
+      return;
+    }
     var convos = await getConversations(statuses: [ConversationStatus.in_progress], limit: 1);
     _conversation = convos.isNotEmpty ? convos.first : null;
     if (_conversation != null) {
@@ -1871,6 +1919,14 @@ class CaptureController extends ChangeNotifier
   }
 
   Future<void> forceProcessingCurrentConversation() async {
+    if (SharedPreferencesUtil().localModeEnabled) {
+      await _persistLocalConversationIfNeeded();
+      await _cleanupCurrentState(disableNativeBackground: true);
+      updateRecordingState(RecordingState.stop);
+      await _socket?.stop(reason: 'local conversation saved');
+      return;
+    }
+
     final sessionStart = _sessionStartSeconds;
 
     // Force-drain tail buffer before clearing state
@@ -2118,7 +2174,7 @@ class CaptureController extends ChangeNotifier
     }
 
     final remainSegments = TranscriptSegment.updateSegments(segments, newSegments);
-    segments.addAll(remainSegments);
+    _appendOrMergeCustomSttSegments(remainSegments);
 
     // Refresh people cache if we see unknown personIds (backend-created persons)
     // Check all newSegments, not just remainSegments, to catch updates to existing segments
@@ -2131,6 +2187,29 @@ class CaptureController extends ChangeNotifier
     _segmentsPhotosVersion++; // Bump version so Selector rebuilds
     hasTranscripts = true;
     notifyListeners();
+  }
+
+  void _appendOrMergeCustomSttSegments(List<TranscriptSegment> newSegments) {
+    for (final newSegment in newSegments) {
+      final lastSegment = segments.isNotEmpty ? segments.last : null;
+      if (_shouldMergeCustomSttSegment(lastSegment, newSegment)) {
+        lastSegment!.text = '${lastSegment.text.trim()} ${newSegment.text.trim()}'.trim();
+        lastSegment.end = newSegment.end;
+        continue;
+      }
+      segments.add(newSegment);
+    }
+  }
+
+  bool _shouldMergeCustomSttSegment(TranscriptSegment? previous, TranscriptSegment next) {
+    if (previous == null) return false;
+    if (!previous.id.startsWith('custom-stt:') || !next.id.startsWith('custom-stt:')) return false;
+    if (previous.speaker != next.speaker) return false;
+    if (previous.isUser != next.isUser) return false;
+    if (previous.personId != next.personId) return false;
+
+    final gapSeconds = next.start - previous.end;
+    return gapSeconds >= 0 && gapSeconds < 30;
   }
 
   void onConnectionStateChanged(bool isConnected) {

@@ -98,7 +98,9 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
       if (notifGranted) {
         SharedPreferencesUtil().notificationsEnabled = true;
         NotificationService.instance.register();
-        NotificationService.instance.saveNotificationToken();
+        if (!SharedPreferencesUtil().localModeEnabled) {
+          NotificationService.instance.saveNotificationToken();
+        }
       }
     });
     _navigateToRoute = widget.navigateToRoute;
@@ -256,7 +258,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     if (!SharedPreferencesUtil().permissionsCompleted) {
       SharedPreferencesUtil().permissionsCompleted = true;
     }
-    updateUserOnboardingState(completed: true);
+    if (!SharedPreferencesUtil().localModeEnabled) {
+      updateUserOnboardingState(completed: true);
+    }
 
     // Navigate uri
     Uri? navigateToUri;
@@ -305,14 +309,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      _initiateApps();
+      if (!SharedPreferencesUtil().localModeEnabled) {
+        _initiateApps();
+      } else {
+        context.read<AppProvider>().setAppsFromCache();
+      }
 
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
         await ForegroundUtil.initializeForegroundService();
         await ForegroundUtil.startForegroundTask();
       }
-      if (mounted) {
+      if (mounted && !SharedPreferencesUtil().localModeEnabled) {
         await Provider.of<HomeProvider>(context, listen: false).setUserPeople();
       }
       if (mounted) {
@@ -669,11 +677,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver, Ticker
                   final convoProvider = ctx.read<ConversationProvider>();
                   final messageProvider = ctx.read<MessageProvider>();
 
-                  if (convoProvider.conversations.isEmpty) {
-                    await convoProvider.getInitialConversations();
-                  } else {
-                    // Force refresh when internet connection is restored
-                    await convoProvider.forceRefreshConversations();
+                  if (!SharedPreferencesUtil().localModeEnabled) {
+                    if (convoProvider.conversations.isEmpty) {
+                      await convoProvider.getInitialConversations();
+                    } else {
+                      // Force refresh when internet connection is restored
+                      await convoProvider.forceRefreshConversations();
+                    }
                   }
 
                   if (messageProvider.messages.isEmpty) {

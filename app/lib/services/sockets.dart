@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:omi/backend/schema/bt_device/bt_device.dart';
+import 'package:omi/backend/preferences.dart';
 import 'package:omi/models/custom_stt_config.dart';
 import 'package:omi/services/sockets/transcription_service.dart';
 import 'package:omi/utils/logger.dart';
@@ -78,7 +79,19 @@ class SocketServicePool extends ISocketService {
       // new socket
       await _socket?.stop();
 
-      if (customSttConfig != null && customSttConfig.isEnabled) {
+      if (SharedPreferencesUtil().localModeEnabled) {
+        if (customSttConfig == null || !customSttConfig.isEnabled) {
+          Logger.debug("Local mode requires a custom/on-device transcription provider");
+          return null;
+        }
+        _socket = TranscriptSocketServiceFactory.createLocalOnlyFromCustomConfig(
+          sampleRate,
+          codec,
+          language,
+          customSttConfig,
+          source: source,
+        );
+      } else if (customSttConfig != null && customSttConfig.isEnabled) {
         _socket = TranscriptSocketServiceFactory.createFromCustomConfig(
           sampleRate,
           codec,
@@ -138,6 +151,7 @@ class SocketServicePool extends ISocketService {
     String? source,
   }) async {
     Logger.debug("socket speech profile > $codec $sampleRate $force source: $source");
+    if (SharedPreferencesUtil().localModeEnabled) return null;
 
     await _mutex.acquire();
     try {

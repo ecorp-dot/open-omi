@@ -60,6 +60,7 @@ class AppProvider extends BaseProvider {
       apps = SharedPreferencesUtil().appsList;
     }
     var app = apps.firstWhereOrNull((app) => app.id == id);
+    if (SharedPreferencesUtil().localModeEnabled) return app;
     if (app == null) {
       var appRes = await getAppDetailsServer(id);
       if (appRes != null) {
@@ -437,6 +438,7 @@ class AppProvider extends BaseProvider {
       if (apps.isEmpty) {
         setAppsFromCache();
       }
+      if (SharedPreferencesUtil().localModeEnabled) return;
 
       // Fetch grouped apps and user's enabled app IDs in parallel
       final results = await Future.wait([
@@ -481,6 +483,10 @@ class AppProvider extends BaseProvider {
 
     try {
       setIsLoading(true);
+      if (SharedPreferencesUtil().localModeEnabled) {
+        popularApps = [];
+        return;
+      }
       popularApps = await retrievePopularApps();
     } catch (e) {
       Logger.debug('Error loading popular apps: $e');

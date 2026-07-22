@@ -18218,6 +18218,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not connect to that microphone. Make sure it is connected in iPhone Settings.'**
   String get rayBanMetaMicPickerConnectError;
+
+  /// Button label that lets the user enter local mode without account sign-in.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue locally'**
+  String get continueLocally;
+
+  /// Title for local-mode onboarding step that opens transcription provider settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your transcriber'**
+  String get setupLocalTranscriber;
+
+  /// Description explaining that local mode supports on-device and user-provided remote STT.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose on-device Whisper or connect any remote speech-to-text provider before using Omi locally.'**
+  String get setupLocalTranscriberDescription;
+
+  /// Button label that opens transcription provider settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure transcriber'**
+  String get configureTranscriber;
+
+  /// Status label shown when local mode has no custom transcription provider selected.
+  ///
+  /// In en, this message translates to:
+  /// **'No transcriber configured'**
+  String get noTranscriberConfigured;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

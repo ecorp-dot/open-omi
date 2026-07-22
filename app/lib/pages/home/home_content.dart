@@ -47,6 +47,13 @@ class HomeContentPageState extends State<HomeContentPage> with AutomaticKeepAliv
 
   Future<void> _loadSummaries() async {
     if (!mounted) return;
+    if (SharedPreferencesUtil().localModeEnabled) {
+      setState(() {
+        _recentSummaries = [];
+        _loadingSummaries = false;
+      });
+      return;
+    }
     setState(() => _loadingSummaries = true);
     final summaries = await getDailySummaries(limit: 3, offset: 0);
     if (mounted) {
@@ -77,6 +84,10 @@ class HomeContentPageState extends State<HomeContentPage> with AutomaticKeepAliv
         return RefreshIndicator(
           onRefresh: () async {
             HapticFeedback.mediumImpact();
+            if (SharedPreferencesUtil().localModeEnabled) {
+              await convoProvider.getInitialConversations();
+              return;
+            }
             await Future.wait([convoProvider.getInitialConversations(), _loadSummaries()]);
           },
           color: Colors.deepPurpleAccent,

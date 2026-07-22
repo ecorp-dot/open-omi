@@ -13,7 +13,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
-import 'package:omi/services/agent_chat_service.dart' show agentLog, initAgentLog;
 import 'package:omi/backend/http/api/agents.dart';
 import 'package:omi/backend/http/api/apps.dart';
 import 'package:omi/backend/http/api/messages.dart';
@@ -375,6 +374,13 @@ class MessageProvider extends ChangeNotifier {
     setLoadingMessages(true);
     if (SharedPreferencesUtil().cachedMessages.isNotEmpty) {
       setHasCachedMessages(true);
+    }
+    if (SharedPreferencesUtil().localModeEnabled) {
+      messages = SharedPreferencesUtil().cachedMessages;
+      messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      setLoadingMessages(false);
+      notifyListeners();
+      return;
     }
     messages = await getMessagesFromServer(dropdownSelected: dropdownSelected);
     if (messages.isEmpty) {

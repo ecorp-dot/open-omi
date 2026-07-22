@@ -9800,4 +9800,20 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get rayBanMetaMicPickerConnectError =>
       'Nie udało się połączyć z tym mikrofonem. Upewnij się, że jest połączony w Ustawieniach iPhone\'a.';
+
+  @override
+  String get continueLocally => 'Continue locally';
+
+  @override
+  String get setupLocalTranscriber => 'Set up your transcriber';
+
+  @override
+  String get setupLocalTranscriberDescription =>
+      'Choose on-device Whisper or connect any remote speech-to-text provider before using Omi locally.';
+
+  @override
+  String get configureTranscriber => 'Configure transcriber';
+
+  @override
+  String get noTranscriberConfigured => 'No transcriber configured';
 }

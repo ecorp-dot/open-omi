@@ -50,3 +50,6 @@ whisper_flutter_new/
 
 # Maestro test reports (generated)
 .maestro/reports/
+
+# FVM Version Cache
+.fvm/

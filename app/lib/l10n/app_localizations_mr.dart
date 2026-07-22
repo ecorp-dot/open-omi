@@ -9782,4 +9782,20 @@ class AppLocalizationsMr extends AppLocalizations {
   @override
   String get rayBanMetaMicPickerConnectError =>
       'त्या मायक्रोफोनशी कनेक्ट करता आले नाही. तो iPhone सेटिंग्जमध्ये कनेक्ट असल्याची खात्री करा.';
+
+  @override
+  String get continueLocally => 'Continue locally';
+
+  @override
+  String get setupLocalTranscriber => 'Set up your transcriber';
+
+  @override
+  String get setupLocalTranscriberDescription =>
+      'Choose on-device Whisper or connect any remote speech-to-text provider before using Omi locally.';
+
+  @override
+  String get configureTranscriber => 'Configure transcriber';
+
+  @override
+  String get noTranscriberConfigured => 'No transcriber configured';
 }

@@ -9822,4 +9822,20 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get rayBanMetaMicPickerConnectError =>
       'ఆ మైక్రోఫోన్‌కు కనెక్ట్ కాలేకపోయాము. అది iPhone సెట్టింగ్‌లలో కనెక్ట్ అయిందని నిర్ధారించుకోండి.';
+
+  @override
+  String get continueLocally => 'Continue locally';
+
+  @override
+  String get setupLocalTranscriber => 'Set up your transcriber';
+
+  @override
+  String get setupLocalTranscriberDescription =>
+      'Choose on-device Whisper or connect any remote speech-to-text provider before using Omi locally.';
+
+  @override
+  String get configureTranscriber => 'Configure transcriber';
+
+  @override
+  String get noTranscriberConfigured => 'No transcriber configured';
 }

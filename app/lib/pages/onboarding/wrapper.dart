@@ -16,6 +16,7 @@ import 'package:omi/pages/onboarding/ai_consent_widget.dart';
 import 'package:omi/pages/onboarding/auth.dart';
 import 'package:omi/pages/onboarding/found_omi/found_omi_widget.dart';
 import 'package:omi/pages/onboarding/knowledge_graph_step.dart';
+import 'package:omi/pages/onboarding/local_transcriber_setup_widget.dart';
 import 'package:omi/pages/onboarding/name/name_widget.dart';
 import 'package:omi/pages/onboarding/permissions/permissions_checker.dart';
 import 'package:omi/pages/onboarding/permissions/permissions_widget.dart';
@@ -79,6 +80,7 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
   late Animation<double> _backgroundFadeAnimation;
   String _currentBackgroundImage = Assets.images.onboardingBg2.path;
   bool get hasSpeechProfile => SharedPreferencesUtil().hasSpeakerProfile;
+  bool get isLocalMode => SharedPreferencesUtil().localModeEnabled;
   SpeechProfileProvider? _speechProfileProvider;
   Future<void>? _knowledgeGraphPrebuildFuture;
 
@@ -140,6 +142,8 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
             _controller!.animateTo(kAiConsentPage);
           } else if (SharedPreferencesUtil().onboardingCompleted) {
             await _routeWithPermissionsCheck(context);
+          } else if (isLocalMode) {
+            _controller!.animateTo(kNamePage);
           } else {
             _controller!.animateTo(kNamePage);
           }
@@ -185,6 +189,7 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
   }
 
   Future<void> _prebuildKnowledgeGraph() async {
+    if (isLocalMode) return;
     try {
       final current = await KnowledgeGraphApi.getKnowledgeGraph();
       final nodes = current['nodes'] as List<dynamic>? ?? const [];
@@ -304,10 +309,12 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
           // Refresh subscription on sign-in: AppShell only fetches it on mount,
           // so an in-session re-login would otherwise leave it null until the
           // Plan & Usage page is opened (missing Pro badge).
-          context.read<UsageProvider>().fetchSubscription();
-          IntercomManager.instance.loginIdentifiedUser(
-            SharedPreferencesUtil().uid,
-          );
+          if (!SharedPreferencesUtil().localModeEnabled) {
+            context.read<UsageProvider>().fetchSubscription();
+            IntercomManager.instance.loginIdentifiedUser(
+              SharedPreferencesUtil().uid,
+            );
+          }
           // Consent is checked first regardless of server-side onboarding
           // state so a returning user signing in on a fresh install still
           // sees the consent screen before any AI processing begins.
@@ -340,11 +347,13 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
       NameWidget(
         goNext: () {
           _goNext(); // Go to Primary Language page
-          IntercomManager.instance.updateUser(
-            FirebaseAuth.instance.currentUser!.email,
-            FirebaseAuth.instance.currentUser!.displayName,
-            FirebaseAuth.instance.currentUser!.uid,
-          );
+          if (!SharedPreferencesUtil().localModeEnabled) {
+            IntercomManager.instance.updateUser(
+              FirebaseAuth.instance.currentUser!.email,
+              FirebaseAuth.instance.currentUser!.displayName,
+              FirebaseAuth.instance.currentUser!.uid,
+            );
+          }
           PlatformManager.instance.analytics.onboardingStepCompleted('Name');
         },
       ),
@@ -374,7 +383,7 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
       ),
       UserReviewPage(
         goNext: () {
-          // Go directly to Speech Profile (skip device steps - we use phone mic now)
+          // Go directly to Speech Profile (or local transcriber setup) because we use phone mic now.
           _controller!.animateTo(kSpeechProfilePage);
           PlatformManager.instance.analytics.onboardingStepCompleted(
             'User Review',
@@ -384,25 +393,34 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
       // Placeholder pages - not used in new flow but kept for index consistency
       Container(), // WelcomePage placeholder
       Container(), // FindDevicesPage placeholder
-      widget.forceAuthPage
-          ? const SizedBox.shrink()
-          : ChangeNotifierProvider.value(
-              value: _speechProfileProvider!,
-              child: SpeechProfileWidget(
-                goNext: () {
-                  PlatformManager.instance.analytics.onboardingStepCompleted(
-                    'Speech Profile',
-                  );
-                  _controller!.animateTo(kKnowledgeGraphPage);
-                },
-                onSkip: () {
-                  PlatformManager.instance.analytics.onboardingStepCompleted(
-                    'Speech Profile Skipped',
-                  );
-                  _controller!.animateTo(kKnowledgeGraphPage);
-                },
-              ),
-            ),
+      isLocalMode
+          ? LocalTranscriberSetupWidget(
+              onContinue: () {
+                PlatformManager.instance.analytics.onboardingStepCompleted(
+                  'Local Transcriber Setup',
+                );
+                _controller!.animateTo(kCompletePage);
+              },
+            )
+          : widget.forceAuthPage
+              ? const SizedBox.shrink()
+              : ChangeNotifierProvider.value(
+                  value: _speechProfileProvider!,
+                  child: SpeechProfileWidget(
+                    goNext: () {
+                      PlatformManager.instance.analytics.onboardingStepCompleted(
+                        'Speech Profile',
+                      );
+                      _controller!.animateTo(kKnowledgeGraphPage);
+                    },
+                    onSkip: () {
+                      PlatformManager.instance.analytics.onboardingStepCompleted(
+                        'Speech Profile Skipped',
+                      );
+                      _controller!.animateTo(kKnowledgeGraphPage);
+                    },
+                  ),
+                ),
       OnboardingKnowledgeGraphStep(
         onContinue: () {
           PlatformManager.instance.analytics.onboardingStepCompleted(
@@ -415,7 +433,9 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
         onComplete: () {
           SharedPreferencesUtil().onboardingCompleted = true;
           SharedPreferencesUtil().permissionsCompleted = true;
-          updateUserOnboardingState(completed: true);
+          if (!SharedPreferencesUtil().localModeEnabled) {
+            updateUserOnboardingState(completed: true);
+          }
           PlatformManager.instance.analytics.onboardingCompleted();
           PaintingBinding.instance.imageCache.clear();
           routeToPage(context, const HomePageWrapper(), replace: true);
@@ -539,7 +559,7 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
                                     _controller!.animateTo(_controller!.index - 1);
                                   }
                                 },
-                                icon: FaIcon(
+                                icon: const FaIcon(
                                   FontAwesomeIcons.arrowLeft,
                                   size: 16.0,
                                   color: Colors.white,
@@ -640,7 +660,7 @@ class _OnboardingWrapperState extends State<OnboardingWrapper> with TickerProvid
                                       );
                                     }
                                   },
-                                  icon: FaIcon(
+                                  icon: const FaIcon(
                                     FontAwesomeIcons.arrowLeft,
                                     size: 16.0,
                                     color: Colors.white,

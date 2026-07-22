@@ -27,13 +27,13 @@ class LanguageSelectorWidget extends StatefulWidget {
   final Function(String?, String?) onLanguageSelected;
 
   const LanguageSelectorWidget({
-    Key? key,
+    super.key,
     required this.availableLanguages,
     this.selectedLanguage,
     this.selectedLanguageName,
     required this.languageScrollController,
     required this.onLanguageSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<LanguageSelectorWidget> createState() => _LanguageSelectorWidgetState();
@@ -352,8 +352,18 @@ class _PrimaryLanguageWidgetState extends State<PrimaryLanguageWidget> {
 
                             // Update the user's primary language
                             final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-                            final userProvider = Provider.of<UserProvider>(context, listen: false);
-                            await homeProvider.updateUserPrimaryLanguage(selectedLanguage!, userProvider: userProvider);
+                            if (SharedPreferencesUtil().localModeEnabled) {
+                              SharedPreferencesUtil().userPrimaryLanguage = selectedLanguage!;
+                              SharedPreferencesUtil().hasSetPrimaryLanguage = true;
+                              homeProvider.userPrimaryLanguage = selectedLanguage!;
+                              homeProvider.hasSetPrimaryLanguage = true;
+                            } else {
+                              final userProvider = Provider.of<UserProvider>(context, listen: false);
+                              await homeProvider.updateUserPrimaryLanguage(
+                                selectedLanguage!,
+                                userProvider: userProvider,
+                              );
+                            }
 
                             widget.goNext();
                           },

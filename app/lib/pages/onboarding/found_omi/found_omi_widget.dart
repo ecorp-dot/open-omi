@@ -173,7 +173,9 @@ class _FoundOmiWidgetState extends State<FoundOmiWidget> {
                                 ? _otherController.text.trim()
                                 : _selectedSource!;
                             SharedPreferencesUtil().foundOmiSource = source;
-                            updateUserOnboardingState(acquisitionSource: source);
+                            if (!SharedPreferencesUtil().localModeEnabled) {
+                              updateUserOnboardingState(acquisitionSource: source);
+                            }
                             PlatformManager.instance.analytics.onboardingUserAcquisitionSource(source);
                             widget.goNext();
                           }

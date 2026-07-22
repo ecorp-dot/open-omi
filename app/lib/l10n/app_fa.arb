@@ -10782,5 +10782,25 @@
     "whisperModelSizeLarge": "بزرگ",
     "whisperModelSizeMedium": "متوسط",
     "whisperModelSizeSmall": "کوچک",
-    "whisperModelSizeTiny": "خیلی کوچک"
+    "whisperModelSizeTiny": "خیلی کوچک",
+    "continueLocally": "Continue locally",
+    "@continueLocally": {
+        "description": "Button label that lets the user enter local mode without account sign-in."
+    },
+    "setupLocalTranscriber": "Set up your transcriber",
+    "@setupLocalTranscriber": {
+        "description": "Title for local-mode onboarding step that opens transcription provider settings."
+    },
+    "setupLocalTranscriberDescription": "Choose on-device Whisper or connect any remote speech-to-text provider before using Omi locally.",
+    "@setupLocalTranscriberDescription": {
+        "description": "Description explaining that local mode supports on-device and user-provided remote STT."
+    },
+    "configureTranscriber": "Configure transcriber",
+    "@configureTranscriber": {
+        "description": "Button label that opens transcription provider settings."
+    },
+    "noTranscriberConfigured": "No transcriber configured",
+    "@noTranscriberConfigured": {
+        "description": "Status label shown when local mode has no custom transcription provider selected."
+    }
 }

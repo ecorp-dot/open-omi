@@ -124,7 +124,7 @@ class TranscriptSegmentSocketService implements IPureSocketListener {
     }
 
     String url =
-        Env.apiBaseUrl!.replaceFirst('https://', 'wss://').replaceFirst('http://', 'ws://') + 'v4/listen$params';
+        '${Env.apiBaseUrl!.replaceFirst('https://', 'wss://').replaceFirst('http://', 'ws://')}v4/listen$params';
 
     _socket = PureSocket(url);
     _socket.setListener(this);
@@ -363,6 +363,35 @@ class TranscriptSocketServiceFactory {
       source: source,
       sttConfigId: sttConfigId,
       sttProvider: config.provider.name,
+    );
+  }
+
+  /// Local mode uses the selected transcriber directly. It must not open the
+  /// secondary Omi socket that normally turns suggested transcripts into
+  /// server-side conversations.
+  static TranscriptSegmentSocketService createLocalOnlyFromCustomConfig(
+    int sampleRate,
+    BleAudioCodec codec,
+    String language,
+    CustomSttConfig config, {
+    String? source,
+  }) {
+    if (!config.isEnabled) {
+      throw ArgumentError("[STTFactory] Local mode requires a custom STT provider.");
+    }
+
+    final primarySocket = config.isLive
+        ? _createStreamingSocket(sampleRate, codec, config)
+        : _createPollingSocket(sampleRate, codec, config);
+
+    return TranscriptSegmentSocketService.withSocket(
+      sampleRate,
+      codec,
+      config.effectiveLanguage,
+      primarySocket,
+      source: source,
+      customSttMode: true,
+      sttConfigId: config.sttConfigId,
     );
   }
 

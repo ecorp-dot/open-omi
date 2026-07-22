@@ -164,6 +164,11 @@ class ConversationProvider extends ChangeNotifier {
 
   Future<void> searchConversations(String query, {bool showShimmer = false}) async {
     if (!_isSignedIn()) return;
+    if (SharedPreferencesUtil().localModeEnabled) {
+      searchedConversations = query.isEmpty ? [] : _filterOutConvos(SharedPreferencesUtil().cachedConversations);
+      groupConversationsByDate();
+      return;
+    }
     if (query.isEmpty && selectedSpeakerId == null) {
       previousQuery = "";
       currentSearchPage = 0;
@@ -366,6 +371,12 @@ class ConversationProvider extends ChangeNotifier {
   }
 
   Future refreshConversations() async {
+    if (SharedPreferencesUtil().localModeEnabled) {
+      conversations = _filterPendingDeletes(SharedPreferencesUtil().cachedConversations);
+      _groupConversationsByDateWithoutNotify();
+      notifyListeners();
+      return;
+    }
     // Debounce mechanism: only refresh if enough time has passed since last refresh
     final now = DateTime.now();
     if (_lastRefreshTime != null && now.difference(_lastRefreshTime!) < _refreshCooldown) {
@@ -461,6 +472,15 @@ class ConversationProvider extends ChangeNotifier {
       _cancelInitialFetchRetry();
       conversationsLoadFailed = false;
       return false;
+    }
+    if (SharedPreferencesUtil().localModeEnabled) {
+      conversationsLoadFailed = false;
+      _cancelInitialFetchRetry();
+      conversations = _filterPendingDeletes(SharedPreferencesUtil().cachedConversations);
+      searchedConversations = conversations;
+      _groupConversationsByDateWithoutNotify();
+      notifyListeners();
+      return true;
     }
     final generation = _sessionGeneration;
     previousQuery = "";
@@ -560,7 +580,7 @@ class ConversationProvider extends ChangeNotifier {
     // can recover even after the auto-retries were exhausted.
     _cancelInitialFetchRetry();
     final fetched = await fetchConversations();
-    if (!fetched || !_isSignedIn()) return;
+    if (!fetched || !_isSignedIn() || SharedPreferencesUtil().localModeEnabled) return;
     await checkHasDailySummaries();
   }
 

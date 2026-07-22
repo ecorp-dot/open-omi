@@ -45,6 +45,10 @@ class SharedPreferencesUtil {
 
   String get uid => getString('uid');
 
+  bool get localModeEnabled => getBool('localModeEnabled');
+
+  set localModeEnabled(bool value) => saveBool('localModeEnabled', value);
+
   //-------------------------------- Device ----------------------------------//
 
   set btDevice(BtDevice value) {

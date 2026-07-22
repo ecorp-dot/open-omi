@@ -18,6 +18,7 @@ import 'package:omi/utils/l10n_extensions.dart';
 import 'package:omi/utils/logger.dart';
 import 'package:omi/utils/platform/platform_manager.dart';
 import 'package:omi/utils/platform/platform_service.dart';
+import 'package:uuid/uuid.dart';
 
 class AuthenticationProvider extends BaseProvider {
   FirebaseAuth get _auth => FirebaseAuth.instance;
@@ -105,6 +106,7 @@ class AuthenticationProvider extends BaseProvider {
   }
 
   bool isSignedIn() {
+    if (SharedPreferencesUtil().localModeEnabled) return true;
     return !_requiresReauthentication && _auth.currentUser != null && !_auth.currentUser!.isAnonymous;
   }
 
@@ -150,6 +152,27 @@ class AuthenticationProvider extends BaseProvider {
           globalNavigatorKey.currentContext?.l10n.authenticationFailed ?? 'Authentication failed. Please try again.',
         );
       }
+      setLoadingState(false);
+    }
+  }
+
+  Future<void> continueLocally(Function() onSignIn) async {
+    if (loading) return;
+    setLoadingState(true);
+    try {
+      final prefs = SharedPreferencesUtil();
+      prefs.localModeEnabled = true;
+      if (prefs.uid.isEmpty || !prefs.uid.startsWith('local-')) {
+        prefs.uid = 'local-${const Uuid().v4()}';
+      }
+      prefs.email = '';
+      prefs.authToken = '';
+      prefs.tokenExpirationTime = 0;
+      prefs.autoSyncOfflineRecordings = false;
+      _requiresReauthentication = false;
+      authToken = null;
+      onSignIn();
+    } finally {
       setLoadingState(false);
     }
   }

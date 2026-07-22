@@ -87,7 +87,7 @@ class _AuthComponentState extends State<AuthComponent> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              FaIcon(FontAwesomeIcons.apple, size: 24),
+                              const FaIcon(FontAwesomeIcons.apple, size: 24),
                               const SizedBox(width: 8),
                               Text(
                                 context.l10n.signInWithApple,
@@ -121,13 +121,35 @@ class _AuthComponentState extends State<AuthComponent> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            FaIcon(FontAwesomeIcons.google, size: 20),
+                            const FaIcon(FontAwesomeIcons.google, size: 20),
                             const SizedBox(width: 8),
                             Text(
                               context.l10n.signInWithGoogle,
                               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, fontFamily: 'Manrope'),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          provider.continueLocally(widget.onSignIn);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                        ),
+                        child: Text(
+                          context.l10n.continueLocally,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, fontFamily: 'Manrope'),
                         ),
                       ),
                     ),

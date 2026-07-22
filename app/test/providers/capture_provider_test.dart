@@ -286,6 +286,72 @@ void main() {
       expect(provider.segmentsPhotosVersion, greaterThan(initialVersion));
     });
 
+    test('grows current custom stt speaker bubble for adjacent same-speaker phrases', () {
+      final provider = CaptureProvider();
+      provider.segments = [
+        TranscriptSegment(
+          id: 'custom-stt:0:SPEAKER_0:false:none:100',
+          text: 'first phrase',
+          speaker: 'SPEAKER_0',
+          isUser: false,
+          personId: null,
+          start: 0.1,
+          end: 0.8,
+          translations: [],
+        ),
+      ];
+
+      provider.onSegmentReceived([
+        TranscriptSegment(
+          id: 'custom-stt:0:SPEAKER_0:false:none:900',
+          text: 'second phrase',
+          speaker: 'SPEAKER_0',
+          isUser: false,
+          personId: null,
+          start: 0.9,
+          end: 1.7,
+          translations: [],
+        ),
+      ]);
+
+      expect(provider.segments, hasLength(1));
+      expect(provider.segments.single.text, 'first phrase second phrase');
+      expect(provider.segments.single.end, 1.7);
+      provider.dispose();
+    });
+
+    test('keeps separate custom stt bubbles when speaker changes', () {
+      final provider = CaptureProvider();
+      provider.segments = [
+        TranscriptSegment(
+          id: 'custom-stt:0:SPEAKER_0:false:none:100',
+          text: 'first speaker',
+          speaker: 'SPEAKER_0',
+          isUser: false,
+          personId: null,
+          start: 0.1,
+          end: 0.8,
+          translations: [],
+        ),
+      ];
+
+      provider.onSegmentReceived([
+        TranscriptSegment(
+          id: 'custom-stt:1:SPEAKER_1:false:none:900',
+          text: 'second speaker',
+          speaker: 'SPEAKER_1',
+          isUser: false,
+          personId: null,
+          start: 0.9,
+          end: 1.7,
+          translations: [],
+        ),
+      ]);
+
+      expect(provider.segments.map((segment) => segment.text), ['first speaker', 'second speaker']);
+      provider.dispose();
+    });
+
     test('increments on photo processing event and updates id', () {
       final provider = CaptureProvider();
       provider.photos = [ConversationPhoto(id: 'temp-photo', base64: 'img', createdAt: DateTime.now())];

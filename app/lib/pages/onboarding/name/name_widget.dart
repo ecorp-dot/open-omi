@@ -129,7 +129,14 @@ class _NameWidgetState extends State<NameWidget> {
                         ? null
                         : () async {
                             FocusManager.instance.primaryFocus?.unfocus();
-                            AuthService.instance.updateGivenName(nameController.text.trim());
+                            if (SharedPreferencesUtil().localModeEnabled) {
+                              final fullName = nameController.text.trim();
+                              SharedPreferencesUtil().givenName = fullName.split(' ').first;
+                              SharedPreferencesUtil().familyName =
+                                  fullName.split(' ').length > 1 ? fullName.split(' ').sublist(1).join(' ') : '';
+                            } else {
+                              AuthService.instance.updateGivenName(nameController.text.trim());
+                            }
                             widget.goNext();
                           },
                     style: ElevatedButton.styleFrom(

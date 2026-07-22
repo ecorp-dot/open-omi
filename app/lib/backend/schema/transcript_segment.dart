@@ -102,10 +102,12 @@ class TranscriptSegment {
     // Replace existing segments with the same ID
     Map<String, TranscriptSegment> updateSegmentMap = {};
     for (var segment in updateSegments) {
+      if (segment.id.trim().isEmpty) continue;
       updateSegmentMap[segment.id] = segment;
     }
     for (int i = 0; i < segments.length; i++) {
       String segmentId = segments[i].id;
+      if (segmentId.trim().isEmpty) continue;
       if (updateSegmentMap.containsKey(segmentId)) {
         segments[i] = updateSegmentMap[segmentId]!;
         updateSegmentMap.remove(segmentId);
@@ -113,7 +115,9 @@ class TranscriptSegment {
     }
 
     // remaining
-    return updateSegments.where((segment) => updateSegmentMap.containsKey(segment.id)).toList();
+    return updateSegments
+        .where((segment) => segment.id.trim().isEmpty || updateSegmentMap.containsKey(segment.id))
+        .toList();
   }
 
   static combineSegments(

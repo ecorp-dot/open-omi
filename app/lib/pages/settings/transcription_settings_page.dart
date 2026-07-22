@@ -150,9 +150,10 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
   void _loadConfig() {
     final activeConfig = SharedPreferencesUtil().customSttConfig;
     setState(() {
-      _useCustomStt = activeConfig.isEnabled;
+      _useCustomStt = SharedPreferencesUtil().localModeEnabled || activeConfig.isEnabled;
       _omiParakeet = !_useCustomStt && SharedPreferencesUtil().transcriptionModel == 'parakeet';
-      _selectedProvider = activeConfig.provider == SttProvider.omi ? SttProvider.openai : activeConfig.provider;
+      _selectedProvider =
+          activeConfig.provider == SttProvider.omi ? SttProvider.onDeviceWhisper : activeConfig.provider;
 
       // Load all provider configs from preferences
       _loadAllProviderConfigs();
@@ -561,7 +562,7 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
 
       // Build the active config (with correct provider based on _useCustomStt)
       final currentConfig = _buildCurrentConfig();
-      final activeConfig = _useCustomStt ? currentConfig : CustomSttConfig(provider: SttProvider.omi);
+      final activeConfig = _useCustomStt ? currentConfig : const CustomSttConfig(provider: SttProvider.omi);
 
       // Omi-hosted engine choice (server-side): pick Parakeet vs the default via transcriptionModel.
       // The backend reads this as stt_service and routes to the self-hosted Parakeet service.
@@ -1059,6 +1060,7 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
   void _selectMode(TranscriptionMode mode) {
     switch (mode) {
       case TranscriptionMode.omi:
+        if (SharedPreferencesUtil().localModeEnabled) return;
         setState(() {
           _useCustomStt = false;
           _omiParakeet = false;
@@ -1081,6 +1083,7 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
         _validateAndSetError();
         break;
       case TranscriptionMode.omiParakeet:
+        if (SharedPreferencesUtil().localModeEnabled) return;
         // Omi-hosted Parakeet — server-routed (transcriptionModel='parakeet' on save), not custom STT.
         setState(() {
           _useCustomStt = false;
@@ -1093,6 +1096,9 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
 
   Widget _buildSourceSelector() {
     final mode = _currentMode;
+    final modes = SharedPreferencesUtil().localModeEnabled
+        ? const [TranscriptionMode.onDevice, TranscriptionMode.cloudProvider]
+        : TranscriptionMode.values;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1112,9 +1118,8 @@ class _TranscriptionSettingsPageState extends State<TranscriptionSettingsPage> {
               dropdownColor: const Color(0xFF1A1A1A),
               style: const TextStyle(color: Colors.white, fontSize: 15),
               icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade500),
-              items: TranscriptionMode.values
-                  .map((m) => DropdownMenuItem<TranscriptionMode>(value: m, child: Text(_modeLabel(m))))
-                  .toList(),
+              items:
+                  modes.map((m) => DropdownMenuItem<TranscriptionMode>(value: m, child: Text(_modeLabel(m)))).toList(),
               onChanged: (m) {
                 if (m != null && m != mode) _selectMode(m);
               },

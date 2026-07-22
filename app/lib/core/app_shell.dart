@@ -358,6 +358,13 @@ class _AppShellState extends State<AppShell> {
     if (isSignedIn) {
       context.read<HomeProvider>().setupHasSpeakerProfile();
       context.read<HomeProvider>().setupUserPrimaryLanguage();
+      if (SharedPreferencesUtil().localModeEnabled) {
+        if (!mounted) return;
+        context.read<MessageProvider>().setMessagesFromCache();
+        context.read<AppProvider>().setAppsFromCache();
+        PlatformManager.instance.intercom.setUserAttributes();
+        return;
+      }
       context.read<UserProvider>().initialize();
       context.read<PeopleProvider>().initialize();
       try {

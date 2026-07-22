@@ -3171,5 +3171,25 @@
     "rayBanMetaMicPickerDescription": "メガネの Bluetooth マイクを選択してください。Omi の使用中は音楽が一時停止します。",
     "rayBanMetaMicPickerEmpty": "Bluetooth マイクが見つかりません。iPhone の設定でメガネを接続してから、もう一度お試しください。",
     "rayBanMetaMicPickerLoadError": "Bluetooth マイクを読み込めませんでした。Bluetooth がオンになっていることを確認して、もう一度お試しください。",
-    "rayBanMetaMicPickerConnectError": "そのマイクに接続できませんでした。iPhone の設定で接続されていることを確認してください。"
+    "rayBanMetaMicPickerConnectError": "そのマイクに接続できませんでした。iPhone の設定で接続されていることを確認してください。",
+    "continueLocally": "Continue locally",
+    "@continueLocally": {
+        "description": "Button label that lets the user enter local mode without account sign-in."
+    },
+    "setupLocalTranscriber": "Set up your transcriber",
+    "@setupLocalTranscriber": {
+        "description": "Title for local-mode onboarding step that opens transcription provider settings."
+    },
+    "setupLocalTranscriberDescription": "Choose on-device Whisper or connect any remote speech-to-text provider before using Omi locally.",
+    "@setupLocalTranscriberDescription": {
+        "description": "Description explaining that local mode supports on-device and user-provided remote STT."
+    },
+    "configureTranscriber": "Configure transcriber",
+    "@configureTranscriber": {
+        "description": "Button label that opens transcription provider settings."
+    },
+    "noTranscriberConfigured": "No transcriber configured",
+    "@noTranscriberConfigured": {
+        "description": "Status label shown when local mode has no custom transcription provider selected."
+    }
 }

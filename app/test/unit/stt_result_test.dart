@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omi/backend/schema/transcript_segment.dart';
 import 'package:omi/models/stt_response_schema.dart';
 import 'package:omi/models/stt_result.dart';
 
@@ -107,6 +108,111 @@ void main() {
       expect(merged.first['speaker_id'], 1);
       expect(merged.last['text'], 'different id');
       expect(merged.last['speaker_id'], 2);
+    });
+
+    test('emits stable ids for timed custom stt chunks', () {
+      final first = SttTranscriptionResult.fromJsonWithSchema(
+        {
+          'channel': {
+            'alternatives': [
+              {
+                'transcript': 'hello world',
+                'words': [
+                  {'punctuated_word': 'hello', 'start': 0.10, 'end': 0.30, 'speaker': 0},
+                  {'punctuated_word': 'world', 'start': 0.31, 'end': 0.60, 'speaker': 0},
+                ],
+              },
+            ],
+          },
+        },
+        SttResponseSchema.deepgramLive,
+      );
+      final repeatedInterim = SttTranscriptionResult.fromJsonWithSchema(
+        {
+          'channel': {
+            'alternatives': [
+              {
+                'transcript': 'hello world again',
+                'words': [
+                  {'punctuated_word': 'hello', 'start': 0.10, 'end': 0.30, 'speaker': 0},
+                  {'punctuated_word': 'world', 'start': 0.31, 'end': 0.60, 'speaker': 0},
+                  {'punctuated_word': 'again', 'start': 0.61, 'end': 0.90, 'speaker': 0},
+                ],
+              },
+            ],
+          },
+        },
+        SttResponseSchema.deepgramLive,
+      );
+
+      final firstMerged = mergeTranscriptSegmentsBySpeaker(first.segments);
+      final interimMerged = mergeTranscriptSegmentsBySpeaker(repeatedInterim.segments);
+
+      expect(firstMerged.single['id'], isNotEmpty);
+      expect(interimMerged.single['id'], firstMerged.single['id']);
+      expect(interimMerged.single['text'], 'hello world again');
+    });
+
+    test('appends custom stt chunks instead of replacing everything with the last phrase', () {
+      final existing = [
+        TranscriptSegment.fromJson({
+          'id': 'custom-stt:0:SPEAKER_0:false:none:100',
+          'text': 'first phrase',
+          'speaker': 'SPEAKER_0',
+          'is_user': false,
+          'person_id': null,
+          'start': 0.10,
+          'end': 0.60,
+          'translations': [],
+        }),
+      ];
+      final nextPhrase = [
+        TranscriptSegment.fromJson({
+          'id': 'custom-stt:0:SPEAKER_0:false:none:1200',
+          'text': 'second phrase',
+          'speaker': 'SPEAKER_0',
+          'is_user': false,
+          'person_id': null,
+          'start': 1.20,
+          'end': 1.80,
+          'translations': [],
+        }),
+      ];
+
+      final remaining = TranscriptSegment.updateSegments(existing, nextPhrase);
+      existing.addAll(remaining);
+
+      expect(existing.map((segment) => segment.text), ['first phrase', 'second phrase']);
+    });
+
+    test('missing segment ids append instead of replacing existing empty-id segments', () {
+      final existing = [
+        TranscriptSegment.fromJson({
+          'text': 'first phrase',
+          'speaker': 'SPEAKER_0',
+          'is_user': false,
+          'person_id': null,
+          'start': 0.0,
+          'end': 1.0,
+          'translations': [],
+        }),
+      ];
+      final nextPhrase = [
+        TranscriptSegment.fromJson({
+          'text': 'second phrase',
+          'speaker': 'SPEAKER_0',
+          'is_user': false,
+          'person_id': null,
+          'start': 1.0,
+          'end': 2.0,
+          'translations': [],
+        }),
+      ];
+
+      final remaining = TranscriptSegment.updateSegments(existing, nextPhrase);
+      existing.addAll(remaining);
+
+      expect(existing.map((segment) => segment.text), ['first phrase', 'second phrase']);
     });
   });
 }

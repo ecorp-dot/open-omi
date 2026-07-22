@@ -64,6 +64,7 @@ dynamic _schemaValue(dynamic json, String? configuredPath, String fallbackPath) 
 
 /// A single segment of transcribed text with timing - matches backend TranscriptSegment
 class SttSegment {
+  final String? id;
   final String text;
   final double start;
   final double end;
@@ -72,8 +73,10 @@ class SttSegment {
   final bool isUser;
   final String? personId;
   final List<dynamic>? translations;
+  final bool hasTiming;
 
   SttSegment({
+    this.id,
     required this.text,
     required this.start,
     required this.end,
@@ -82,10 +85,13 @@ class SttSegment {
     this.isUser = false,
     this.personId,
     this.translations,
+    this.hasTiming = true,
   }) : speaker = speaker ?? 'SPEAKER_$speakerId';
 
   Map<String, dynamic> toTranscriptSegmentJson() {
     return {
+      if (id != null && id!.trim().isNotEmpty) 'id': id,
+      if ((id == null || id!.trim().isEmpty) && hasTiming) 'id': _stableTranscriptSegmentId(this),
       'text': text.trim(),
       'speaker': speaker,
       'speaker_id': speakerId,
@@ -96,6 +102,13 @@ class SttSegment {
       if (translations != null) 'translations': translations,
     };
   }
+}
+
+String _stableTranscriptSegmentId(SttSegment segment) {
+  final startMs = (segment.start * 1000).round();
+  final speaker = segment.speaker.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+  final personId = segment.personId?.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_') ?? 'none';
+  return 'custom-stt:${segment.speakerId}:$speaker:${segment.isUser}:$personId:$startMs';
 }
 
 class SttTranscriptionResult {
@@ -123,10 +136,12 @@ class SttTranscriptionResult {
 
           double start = audioOffsetSeconds;
           double end = audioOffsetSeconds + schema.defaultSegmentDuration;
+          var hasTiming = false;
 
           if (schema.segmentsStartField != null) {
             final startValue = JsonPathNavigator.getDouble(seg, schema.segmentsStartField);
             if (startValue != null) {
+              hasTiming = true;
               // Handle Azure's tick format (100 nanoseconds per tick)
               if (schema.segmentsStartField!.contains('Ticks')) {
                 start = audioOffsetSeconds + (startValue / 10000000.0);
@@ -139,6 +154,7 @@ class SttTranscriptionResult {
           if (schema.segmentsEndField != null) {
             final endValue = JsonPathNavigator.getDouble(seg, schema.segmentsEndField);
             if (endValue != null) {
+              hasTiming = true;
               if (schema.segmentsEndField!.contains('Ticks')) {
                 end = audioOffsetSeconds + (endValue / 10000000.0);
               } else {
@@ -168,6 +184,7 @@ class SttTranscriptionResult {
               isUser: isUser,
               personId: personId,
               translations: translations,
+              hasTiming: hasTiming,
             ),
           );
         }
@@ -183,6 +200,7 @@ class SttTranscriptionResult {
           text: rawText.trim(),
           start: audioOffsetSeconds,
           end: audioOffsetSeconds + schema.defaultSegmentDuration,
+          hasTiming: false,
         ),
       );
     }

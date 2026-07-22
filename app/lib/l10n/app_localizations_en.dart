@@ -9767,4 +9767,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get rayBanMetaMicPickerConnectError =>
       'Could not connect to that microphone. Make sure it is connected in iPhone Settings.';
+
+  @override
+  String get continueLocally => 'Continue locally';
+
+  @override
+  String get setupLocalTranscriber => 'Set up your transcriber';
+
+  @override
+  String get setupLocalTranscriberDescription =>
+      'Choose on-device Whisper or connect any remote speech-to-text provider before using Omi locally.';
+
+  @override
+  String get configureTranscriber => 'Configure transcriber';
+
+  @override
+  String get noTranscriberConfigured => 'No transcriber configured';
 }
